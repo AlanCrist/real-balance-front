@@ -1,5 +1,4 @@
 export default {
-  // Common
   common: {
     appName: 'Real Balance',
     appTagline: 'Your finances, simplified',
@@ -8,6 +7,8 @@ export default {
     add: 'Add',
     delete: 'Delete',
     save: 'Save',
+    confirm: 'Confirm',
+    edit: 'Edit',
     continue: 'Continue',
     skip: 'Skip setup',
     getStarted: 'Get Started',
@@ -19,15 +20,31 @@ export default {
     monthsLeft: '~{count} months left',
     noData: 'No data',
     language: 'Language',
+    pressKey: 'Press {key} to quick add',
+    close: 'Close',
+    account: 'Account',
+    dateRange: 'Date Range',
+    from: 'From',
+    to: 'To',
+    listening: 'Listening...',
+    pending: 'Pending',
+    paid: 'Paid',
+    recurring: 'Recurring',
+    income: 'Income',
+    transfer: 'Transfer',
+    newMonth: 'New Month',
+    emptyMonth: 'Empty Month',
+    duplicateAll: 'Duplicate All',
+    duplicateRecurring: 'Recurring Only',
   },
 
-  // Navigation
   nav: {
     dashboard: 'Dashboard',
     transactions: 'Transactions',
     creditCard: 'Credit Card',
     accounts: 'Accounts',
     goals: 'Goals',
+    insights: 'Insights',
     home: 'Home',
     history: 'History',
     card: 'Card',
@@ -36,12 +53,12 @@ export default {
     darkMode: 'Dark Mode',
   },
 
-  // Dashboard
   dashboard: {
     title: 'Dashboard',
     subtitle: 'Your financial overview',
     addExpense: 'Add Expense',
     realBalance: 'Real Balance',
+    realBalanceTooltip: 'Real balance is your total account balance minus credit card debt. It shows your true financial position.',
     afterCreditDebt: 'After credit card debt',
     accountBalance: 'Account Balance',
     allAccountsCombined: 'All accounts combined',
@@ -52,9 +69,13 @@ export default {
     monthlySpendingChart: 'Monthly Spending',
     byCategory: 'By Category',
     recentExpenses: 'Recent Expenses',
+    monthlyIncome: 'Income',
+    fixedExpenses: 'Fixed Expenses',
+    variableExpenses: 'Variable Expenses',
+    projectedBalance: 'Projected Balance',
+    noTransactionsThisMonth: 'No transactions this month',
   },
 
-  // Quick Add
   quickAdd: {
     title: 'Add Expense',
     subtitle: 'Type amount + description + payment method',
@@ -70,7 +91,6 @@ export default {
     example3Desc: '$25 on credit card',
   },
 
-  // Transactions
   transactions: {
     title: 'Transactions',
     subtitle: 'All your financial movements',
@@ -80,9 +100,11 @@ export default {
     transactionsCount: '{count} transactions',
     noTransactions: 'No transactions yet',
     noExpensesThisMonth: 'No expenses this month',
+    editTransaction: 'Edit Transaction',
+    markPaid: 'Mark as Paid',
+    markPending: 'Mark as Pending',
   },
 
-  // Credit Card
   creditCards: {
     title: 'Credit Cards',
     subtitle: 'Manage your credit card spending',
@@ -98,9 +120,41 @@ export default {
     upcomingInvoice: 'Upcoming Invoice',
     dueOnThe: 'Due on the {day}th',
     creditCardTransactions: 'Credit Card Transactions',
+    addCard: 'Add Card',
+    editCard: 'Edit Card',
+    newCard: 'New Credit Card',
+    cardName: 'Card Name',
+    bank: 'Bank',
+    network: 'Network',
+    cardType: 'Card Type',
+    creditCardType: 'Credit',
+    debitCardType: 'Debit',
+    hybridCardType: 'Hybrid',
+    closingDay: 'Closing Day',
+    dueDay: 'Due Date',
+    confirmDelete: 'Are you sure you want to delete this card?',
+    deleteCard: 'Delete',
+    edit: 'Edit',
+    cancel: 'Cancel',
+    saveChanges: 'Save Changes',
+    createCard: 'Create Card',
+    selectCard: 'Select a credit card...',
+    noSpecificCard: 'No specific card',
+    of: 'of',
+    closes: 'Closes',
+    due: 'Due',
+    creditLimitUsage: 'Credit Limit Usage',
+    threeMonthAvg: '3-Month Avg',
+    topCategory: 'Top Category',
+    transactions: 'transactions',
+    noData: 'No data',
+    notApplicable: 'N/A',
+    limitStatus: 'Limit Status',
+    estimatedActivity: 'Estimated activity for next cycle',
+    estimatedExpenses: 'Estimated expenses for next cycle',
+    willCloseOn: 'Will close on',
   },
 
-  // Accounts
   accounts: {
     title: 'Accounts',
     subtitle: 'Manage your accounts and balances',
@@ -118,7 +172,6 @@ export default {
     digitalBank: 'Digital Bank',
   },
 
-  // Goals
   goals: {
     title: 'Savings Goals',
     subtitle: 'Track your financial goals',
@@ -137,7 +190,6 @@ export default {
     noGoalsDesc: 'Create your first saving goal to get started',
   },
 
-  // Onboarding
   onboarding: {
     setupTitle: "Let's set up your finances",
     monthlyIncome: 'Monthly Income',
@@ -150,7 +202,43 @@ export default {
     currentBalance: 'Current balance',
   },
 
-  // Categories
+  alerts: {
+    title: 'Alerts',
+    creditUsageHigh: 'Your credit card usage is above {percent}%.',
+    spendingIncrease: 'You spent {percent}% more on {category} this month.',
+    goalAlmostReached: 'You are close to reaching your "{goal}" goal!',
+    noAlerts: 'No alerts right now. Keep it up!',
+  },
+
+  insights: {
+    title: 'Financial Insights',
+    subtitle: 'Understand your spending patterns',
+    spendingTrend: 'Spending Trend',
+    vsLastMonth: 'vs last month',
+    increased: 'increased',
+    decreased: 'decreased',
+    categoryBreakdown: 'Category Breakdown',
+    creditRisk: 'Credit Risk',
+    creditRiskLow: 'Low risk - Credit usage is under control',
+    creditRiskMedium: 'Medium risk - Credit usage is moderate',
+    creditRiskHigh: 'High risk - Credit usage is too high',
+    topCategories: 'Top Categories This Month',
+    dailyAverage: 'Daily Average',
+    projectedMonthly: 'Projected Monthly',
+    biggestExpense: 'Biggest Expense',
+    thisMonth: 'This month',
+    lastMonth: 'Last month',
+    creditLimitUsage: 'Credit Limit Usage',
+  },
+
+  badges: {
+    title: 'Achievements',
+    trackingStreak: '{count} days tracking',
+    underBudget: 'Under budget this week',
+    firstGoal: 'First goal created',
+    savingsGrowing: 'Savings growing',
+  },
+
   categories: {
     food: 'Food',
     groceries: 'Groceries',
@@ -163,7 +251,6 @@ export default {
     other: 'Other',
   },
 
-  // Payment methods
   paymentMethods: {
     debit: 'Debit',
     credit: 'Credit',
