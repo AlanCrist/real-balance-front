@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, X, CreditCard, Banknote, Smartphone, DollarSign } from 'lucide-react'
+import { Send, X, CreditCard, Banknote, Smartphone, DollarSign, Mic, MicOff } from 'lucide-react'
 import { parseExpenseInput } from '@/utils/parseExpense'
 import { formatCurrency } from '@/utils/formatters'
 import { useStore } from '@/store/useStore'
@@ -14,6 +14,13 @@ interface ExpenseInputProps {
   size?: 'default' | 'large'
 }
 
+declare global {
+  interface Window {
+    SpeechRecognition: any
+    webkitSpeechRecognition: any
+  }
+}
+
 const paymentIcons: Record<PaymentMethod, typeof CreditCard> = {
   credit: CreditCard,
   debit: Banknote,
@@ -24,19 +31,73 @@ const paymentIcons: Record<PaymentMethod, typeof CreditCard> = {
 export function ExpenseInput({ autoFocus = false, onSuccess, className, size = 'default' }: ExpenseInputProps) {
   const [input, setInput] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const [isListening, setIsListening] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<any>(null)
   const addTransaction = useStore((s) => s.addTransaction)
   const accounts = useStore((s) => s.accounts)
   const creditCards = useStore((s) => s.creditCards)
   const { t, locale } = useI18n()
 
-  const parsed = input ? parseExpenseInput(input) : null
+  const parsed = input ? parseExpenseInput(input, locale) : null
+
+  // Initialize Web Speech API
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+
+    const recognition = new SpeechRecognition()
+    recognition.interimResults = false
+    recognition.lang = locale === 'pt' ? 'pt-BR' : locale === 'es' ? 'es-ES' : locale === 'fr' ? 'fr-FR' : 'en-US'
+
+    recognition.onstart = () => {
+      setIsListening(true)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.onresult = (event: any) => {
+      let transcript = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript
+      }
+      if (transcript) {
+        setInput(transcript)
+        setShowConfirm(false)
+      }
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+    }
+
+    recognitionRef.current = recognition
+
+    return () => {
+      recognition.abort()
+    }
+  }, [locale])
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus()
     }
   }, [autoFocus])
+
+  const handleVoiceInput = useCallback(() => {
+    if (!recognitionRef.current) return
+
+    if (isListening) {
+      recognitionRef.current.abort()
+      setIsListening(false)
+    } else {
+      recognitionRef.current.start()
+    }
+  }, [isListening])
 
   const handleSubmit = useCallback(() => {
     if (!parsed) return
@@ -46,13 +107,15 @@ export function ExpenseInput({ autoFocus = false, onSuccess, className, size = '
 
     addTransaction({
       amount: parsed.amount,
-      type: 'expense',
+      type: parsed.type,
       category: parsed.category,
       description: parsed.description,
       date: new Date().toISOString(),
       paymentMethod: parsed.paymentMethod,
       accountId: parsed.paymentMethod !== 'credit' ? defaultAccount?.id : undefined,
       creditCardId: parsed.paymentMethod === 'credit' ? defaultCard?.id : undefined,
+      status: 'pending',
+      isRecurring: false,
     })
 
     setInput('')
@@ -96,12 +159,31 @@ export function ExpenseInput({ autoFocus = false, onSuccess, className, size = '
           value={input}
           onChange={(e) => { setInput(e.target.value); setShowConfirm(false) }}
           onKeyDown={handleKeyDown}
-          placeholder={t.quickAdd.placeholder}
+          placeholder={isListening ? t.common.listening : t.quickAdd.placeholder}
           className={cn(
             'flex-1 bg-transparent outline-none placeholder:text-muted-foreground/60',
             isLarge ? 'text-lg' : 'text-sm'
           )}
         />
+        {recognitionRef.current && (
+          <button
+            onClick={handleVoiceInput}
+            className={cn(
+              'p-1 rounded-full transition-colors',
+              isListening
+                ? 'text-red-500 hover:text-red-600'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+            aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+            title={isListening ? 'Stop listening' : 'Voice input'}
+          >
+            {isListening ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </button>
+        )}
         {input && (
           <button
             onClick={() => { setInput(''); setShowConfirm(false) }}
