@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Receipt, CreditCard, Wallet, Target, Plus } from 'lucide-react'
+import { LayoutDashboard, Receipt, CreditCard, Wallet, Target, BarChart3, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
 
@@ -12,6 +12,7 @@ export function MobileNav() {
     { to: '/transactions', icon: Receipt, label: t.nav.history },
     { to: '/credit-card', icon: CreditCard, label: t.nav.card },
     { to: '/accounts', icon: Wallet, label: t.nav.accounts },
+    { to: '/insights', icon: BarChart3, label: t.nav.insights },
     { to: '/goals', icon: Target, label: t.nav.goals },
   ]
 

@@ -5,6 +5,7 @@ import {
   CreditCard,
   Wallet,
   Target,
+  BarChart3,
   Moon,
   Sun,
   Plus,
@@ -24,6 +25,7 @@ export function Sidebar() {
     { to: '/credit-card', icon: CreditCard, label: t.nav.creditCard },
     { to: '/accounts', icon: Wallet, label: t.nav.accounts },
     { to: '/goals', icon: Target, label: t.nav.goals },
+    { to: '/insights', icon: BarChart3, label: t.nav.insights },
   ]
 
   return (
