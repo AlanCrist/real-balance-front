@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Account, CreditCard, Transaction, Goal, OnboardingData } from '@/types'
+import type { Account, CreditCard, Transaction, Goal, OnboardingData, Month } from '@/types'
 import { generateId } from '@/utils/formatters'
 
 interface AppState {
@@ -10,9 +10,12 @@ interface AppState {
   goals: Goal[]
   onboarding: OnboardingData
   theme: 'light' | 'dark'
+  months: Month[]
+  currentMonthId: string | null
 
   addTransaction: (tx: Omit<Transaction, 'id'>) => void
   removeTransaction: (id: string) => void
+  updateTransaction: (id: string, updates: Partial<Transaction>) => void
 
   addAccount: (account: Omit<Account, 'id'>) => void
   updateAccount: (id: string, updates: Partial<Account>) => void
@@ -20,11 +23,16 @@ interface AppState {
 
   addCreditCard: (card: Omit<CreditCard, 'id'>) => void
   updateCreditCard: (id: string, updates: Partial<CreditCard>) => void
+  removeCreditCard: (id: string) => void
 
   addGoal: (goal: Omit<Goal, 'id'>) => void
   updateGoal: (id: string, updates: Partial<Goal>) => void
   removeGoal: (id: string) => void
   contributeToGoal: (id: string, amount: number) => void
+
+  addMonth: (m: Omit<Month, 'id'>) => void
+  setCurrentMonth: (id: string | null) => void
+  duplicateMonth: (fromMonthId: string, mode: 'all' | 'recurring') => void
 
   setOnboarding: (data: Partial<OnboardingData>) => void
   completeOnboarding: () => void
@@ -34,6 +42,9 @@ interface AppState {
   getTotalCreditUsed: () => number
   getTotalCreditLimit: () => number
   getMonthlySpending: () => number
+  getMonthlyIncome: () => number
+  getMonthlyFixed: () => number
+  getMonthlyVariable: () => number
   getRealBalance: () => number
 }
 
@@ -44,24 +55,30 @@ const defaultAccounts: Account[] = [
 ]
 
 const defaultCreditCards: CreditCard[] = [
-  { id: '1', name: 'Visa Platinum', limit: 5000, used: 1240, closingDay: 25, dueDay: 5, color: '#3b82f6' },
+  { id: '1', name: 'Visa Platinum', bank: 'Itaú', network: 'visa', cardType: 'credit', limit: 5000, used: 1240, closingDay: 25, dueDay: 5, color: '#ff6b35' },
 ]
 
 const now = new Date()
 const currentMonth = now.getMonth()
 const currentYear = now.getFullYear()
 
+const defaultMonthId = generateId()
+
+const defaultMonths: Month[] = [
+  { id: defaultMonthId, month: currentMonth, year: currentYear },
+]
+
 const defaultTransactions: Transaction[] = [
-  { id: '1', amount: 35, type: 'expense', category: 'food', description: 'lunch', date: new Date(currentYear, currentMonth, now.getDate()).toISOString(), paymentMethod: 'debit', accountId: '1' },
-  { id: '2', amount: 120, type: 'expense', category: 'groceries', description: 'weekly groceries', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'credit', creditCardId: '1' },
-  { id: '3', amount: 25, type: 'expense', category: 'transport', description: 'uber ride', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'debit', accountId: '1' },
-  { id: '4', amount: 15, type: 'expense', category: 'entertainment', description: 'netflix', date: new Date(currentYear, currentMonth, now.getDate() - 2).toISOString(), paymentMethod: 'credit', creditCardId: '1' },
-  { id: '5', amount: 60, type: 'expense', category: 'health', description: 'pharmacy', date: new Date(currentYear, currentMonth, now.getDate() - 3).toISOString(), paymentMethod: 'debit', accountId: '1' },
-  { id: '6', amount: 85, type: 'expense', category: 'shopping', description: 'new shoes', date: new Date(currentYear, currentMonth, now.getDate() - 4).toISOString(), paymentMethod: 'credit', creditCardId: '1' },
-  { id: '7', amount: 42, type: 'expense', category: 'food', description: 'dinner with friends', date: new Date(currentYear, currentMonth, now.getDate() - 5).toISOString(), paymentMethod: 'debit', accountId: '2' },
-  { id: '8', amount: 200, type: 'expense', category: 'housing', description: 'electricity bill', date: new Date(currentYear, currentMonth, now.getDate() - 6).toISOString(), paymentMethod: 'debit', accountId: '1' },
-  { id: '9', amount: 3500, type: 'income', category: 'other', description: 'salary', date: new Date(currentYear, currentMonth, 1).toISOString(), paymentMethod: 'debit', accountId: '1' },
-  { id: '10', amount: 30, type: 'expense', category: 'transport', description: 'gas station', date: new Date(currentYear, currentMonth, now.getDate() - 7).toISOString(), paymentMethod: 'debit', accountId: '1' },
+  { id: '1', amount: 35, type: 'expense', category: 'food', description: 'lunch', date: new Date(currentYear, currentMonth, now.getDate()).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
+  { id: '2', amount: 120, type: 'expense', category: 'groceries', description: 'weekly groceries', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
+  { id: '3', amount: 25, type: 'expense', category: 'transport', description: 'uber ride', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
+  { id: '4', amount: 15, type: 'expense', category: 'entertainment', description: 'netflix', date: new Date(currentYear, currentMonth, now.getDate() - 2).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
+  { id: '5', amount: 60, type: 'expense', category: 'health', description: 'pharmacy', date: new Date(currentYear, currentMonth, now.getDate() - 3).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
+  { id: '6', amount: 85, type: 'expense', category: 'shopping', description: 'new shoes', date: new Date(currentYear, currentMonth, now.getDate() - 4).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
+  { id: '7', amount: 42, type: 'expense', category: 'food', description: 'dinner with friends', date: new Date(currentYear, currentMonth, now.getDate() - 5).toISOString(), paymentMethod: 'debit', accountId: '2', status: 'paid', isRecurring: false, monthId: defaultMonthId },
+  { id: '8', amount: 200, type: 'expense', category: 'housing', description: 'electricity bill', date: new Date(currentYear, currentMonth, now.getDate() - 6).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
+  { id: '9', amount: 3500, type: 'income', category: 'other', description: 'salary', date: new Date(currentYear, currentMonth, 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
+  { id: '10', amount: 30, type: 'expense', category: 'transport', description: 'gas station', date: new Date(currentYear, currentMonth, now.getDate() - 7).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
 ]
 
 const defaultGoals: Goal[] = [
@@ -78,6 +95,8 @@ export const useStore = create<AppState>()(
       goals: defaultGoals,
       onboarding: { monthlyIncome: 3500, creditCardLimit: 5000, accounts: [], completed: true },
       theme: 'dark',
+      months: defaultMonths,
+      currentMonthId: defaultMonthId,
 
       addTransaction: (tx) =>
         set((state) => {
@@ -108,6 +127,11 @@ export const useStore = create<AppState>()(
           transactions: state.transactions.filter((t) => t.id !== id),
         })),
 
+      updateTransaction: (id, updates) =>
+        set((state) => ({
+          transactions: state.transactions.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+        })),
+
       addAccount: (account) =>
         set((state) => ({
           accounts: [...state.accounts, { ...account, id: generateId() }],
@@ -133,6 +157,11 @@ export const useStore = create<AppState>()(
           creditCards: state.creditCards.map((c) => (c.id === id ? { ...c, ...updates } : c)),
         })),
 
+      removeCreditCard: (id) =>
+        set((state) => ({
+          creditCards: state.creditCards.filter((c) => c.id !== id),
+        })),
+
       addGoal: (goal) =>
         set((state) => ({
           goals: [...state.goals, { ...goal, id: generateId() }],
@@ -154,6 +183,48 @@ export const useStore = create<AppState>()(
             g.id === id ? { ...g, currentAmount: g.currentAmount + amount } : g
           ),
         })),
+
+      addMonth: (m) =>
+        set((state) => ({
+          months: [...state.months, { ...m, id: generateId() }],
+        })),
+
+      setCurrentMonth: (id) =>
+        set(() => ({
+          currentMonthId: id,
+        })),
+
+      duplicateMonth: (fromMonthId, mode) =>
+        set((state) => {
+          const fromMonth = state.months.find((m) => m.id === fromMonthId)
+          if (!fromMonth) return state
+
+          const newMonthId = generateId()
+          const newMonth: Month = {
+            id: newMonthId,
+            month: (fromMonth.month + 1) % 12,
+            year: fromMonth.month === 11 ? fromMonth.year + 1 : fromMonth.year,
+          }
+
+          const transactionsToClone = state.transactions.filter((t) =>
+            mode === 'all'
+              ? t.monthId === fromMonthId
+              : t.monthId === fromMonthId && t.isRecurring
+          )
+
+          const clonedTransactions = transactionsToClone.map((t) => ({
+            ...t,
+            id: generateId(),
+            monthId: newMonthId,
+            status: 'pending' as const,
+            date: new Date(newMonth.year, newMonth.month, new Date(t.date).getDate()).toISOString(),
+          }))
+
+          return {
+            months: [...state.months, newMonth],
+            transactions: [...state.transactions, ...clonedTransactions],
+          }
+        }),
 
       setOnboarding: (data) =>
         set((state) => ({
@@ -183,12 +254,92 @@ export const useStore = create<AppState>()(
       },
 
       getMonthlySpending: () => {
-        const now = new Date()
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-        return get()
-          .transactions.filter(
-            (t) => t.type === 'expense' && new Date(t.date) >= startOfMonth
-          )
+        const state = get()
+        const currentMonthId = state.currentMonthId
+        const currentMonth = state.months.find((m) => m.id === currentMonthId)
+
+        if (!currentMonth) {
+          const now = new Date()
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+          return state.transactions
+            .filter((t) => t.type === 'expense' && new Date(t.date) >= startOfMonth)
+            .reduce((sum, t) => sum + t.amount, 0)
+        }
+
+        return state.transactions
+          .filter((t) => {
+            if (t.monthId === currentMonthId) return t.type === 'expense'
+            if (!t.monthId) {
+              const txDate = new Date(t.date)
+              return t.type === 'expense' && txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
+            }
+            return false
+          })
+          .reduce((sum, t) => sum + t.amount, 0)
+      },
+
+      getMonthlyIncome: () => {
+        const state = get()
+        const currentMonthId = state.currentMonthId
+        const currentMonth = state.months.find((m) => m.id === currentMonthId)
+
+        if (!currentMonth) {
+          const now = new Date()
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+          return state.transactions
+            .filter((t) => t.type === 'income' && new Date(t.date) >= startOfMonth)
+            .reduce((sum, t) => sum + t.amount, 0)
+        }
+
+        return state.transactions
+          .filter((t) => {
+            if (t.monthId === currentMonthId) return t.type === 'income'
+            if (!t.monthId) {
+              const txDate = new Date(t.date)
+              return t.type === 'income' && txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
+            }
+            return false
+          })
+          .reduce((sum, t) => sum + t.amount, 0)
+      },
+
+      getMonthlyFixed: () => {
+        const state = get()
+        const currentMonthId = state.currentMonthId
+        const currentMonth = state.months.find((m) => m.id === currentMonthId)
+
+        if (!currentMonth) return 0
+
+        return state.transactions
+          .filter((t) => {
+            const isInMonth =
+              t.monthId === currentMonthId ||
+              (!t.monthId && (() => {
+                const txDate = new Date(t.date)
+                return txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
+              })())
+            return isInMonth && t.type === 'expense' && t.isRecurring
+          })
+          .reduce((sum, t) => sum + t.amount, 0)
+      },
+
+      getMonthlyVariable: () => {
+        const state = get()
+        const currentMonthId = state.currentMonthId
+        const currentMonth = state.months.find((m) => m.id === currentMonthId)
+
+        if (!currentMonth) return 0
+
+        return state.transactions
+          .filter((t) => {
+            const isInMonth =
+              t.monthId === currentMonthId ||
+              (!t.monthId && (() => {
+                const txDate = new Date(t.date)
+                return txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
+              })())
+            return isInMonth && t.type === 'expense' && !t.isRecurring
+          })
           .reduce((sum, t) => sum + t.amount, 0)
       },
 
