@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { Target, Plus, Trash2, TrendingUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -129,13 +130,20 @@ export function Goals() {
       </Card>
 
       <div className="space-y-3">
-        {goals.map((goal) => {
+        {goals.map((goal, idx) => {
           const percent = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
           const remaining = goal.targetAmount - goal.currentAmount
           const monthsLeft = remaining > 0 ? Math.ceil(remaining / goal.monthlyTarget) : 0
 
           return (
-            <Card key={goal.id} className="group">
+            <motion.div
+              key={goal.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: idx * 0.05 }}
+              whileHover={{ y: -2 }}
+            >
+              <Card className="group">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -212,6 +220,7 @@ export function Goals() {
                 )}
               </CardContent>
             </Card>
+            </motion.div>
           )
         })}
       </div>

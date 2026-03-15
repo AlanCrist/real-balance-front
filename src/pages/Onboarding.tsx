@@ -50,6 +50,9 @@ export function Onboarding() {
         setOnboarding({ creditCardLimit: limit })
         addCreditCard({
           name: 'My Card',
+          bank: 'other',
+          network: 'visa',
+          cardType: 'credit',
           limit,
           used: 0,
           closingDay: 25,

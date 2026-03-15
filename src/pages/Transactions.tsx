@@ -12,10 +12,15 @@ import type { PaymentMethod } from '@/types'
 
 export function Transactions() {
   const transactions = useStore((s) => s.transactions)
+  const accounts = useStore((s) => s.accounts)
+  const currentMonthId = useStore((s) => s.currentMonthId)
   const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'all'>('all')
+  const [accountFilter, setAccountFilter] = useState<string>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
   const paymentMethods: Array<{ value: PaymentMethod | 'all'; label: string }> = [
@@ -36,9 +41,40 @@ export function Transactions() {
       if (search && !tx.description.toLowerCase().includes(search.toLowerCase())) return false
       if (categoryFilter !== 'all' && tx.category !== categoryFilter) return false
       if (methodFilter !== 'all' && tx.paymentMethod !== methodFilter) return false
+      if (accountFilter !== 'all' && tx.accountId !== accountFilter) return false
+
+      if (currentMonthId) {
+        if (tx.monthId === currentMonthId) {
+          // matches current month
+        } else if (tx.monthId === undefined) {
+          // fallback to date-based matching
+          const txDate = new Date(tx.date)
+          const months = useStore.getState().months
+          const currentMonth = months.find((m) => m.id === currentMonthId)
+          if (!currentMonth || txDate.getMonth() !== currentMonth.month || txDate.getFullYear() !== currentMonth.year) {
+            return false
+          }
+        } else {
+          return false
+        }
+      }
+
+      if (dateFrom) {
+        const txDate = new Date(tx.date)
+        const fromDate = new Date(dateFrom)
+        if (txDate < fromDate) return false
+      }
+
+      if (dateTo) {
+        const txDate = new Date(tx.date)
+        const toDate = new Date(dateTo)
+        toDate.setHours(23, 59, 59, 999)
+        if (txDate > toDate) return false
+      }
+
       return true
     })
-  }, [transactions, search, categoryFilter, methodFilter])
+  }, [transactions, search, categoryFilter, methodFilter, accountFilter, dateFrom, dateTo, currentMonthId])
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -107,6 +143,61 @@ export function Transactions() {
                 ))}
               </div>
             </div>
+
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">{t.common.account}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setAccountFilter('all')}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
+                    accountFilter === 'all'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  )}
+                >
+                  {t.common.all}
+                </button>
+                {accounts.map((account) => (
+                  <button
+                    key={account.id}
+                    onClick={() => setAccountFilter(account.id)}
+                    className={cn(
+                      'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
+                      accountFilter === account.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    )}
+                  >
+                    {account.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">{t.common.dateRange}</p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">{t.common.from}</label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">{t.common.to}</label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -115,7 +206,7 @@ export function Transactions() {
         <Badge variant="secondary">
           {t.transactions.transactionsCount.replace('{count}', String(filtered.length))}
         </Badge>
-        {(categoryFilter !== 'all' || methodFilter !== 'all' || search) && (
+        {(categoryFilter !== 'all' || methodFilter !== 'all' || accountFilter !== 'all' || dateFrom || dateTo || search) && (
           <Button
             variant="ghost"
             size="sm"
@@ -123,6 +214,9 @@ export function Transactions() {
               setSearch('')
               setCategoryFilter('all')
               setMethodFilter('all')
+              setAccountFilter('all')
+              setDateFrom('')
+              setDateTo('')
             }}
             className="text-xs"
           >
@@ -133,7 +227,7 @@ export function Transactions() {
 
       <Card>
         <CardContent className="p-2">
-          <TransactionList transactions={filtered} showDelete />
+          <TransactionList transactions={filtered} showDelete showEdit />
         </CardContent>
       </Card>
     </div>
