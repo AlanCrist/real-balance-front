@@ -28,9 +28,9 @@ export function Goals() {
   const [contributeId, setContributeId] = useState<string | null>(null)
   const [contributeAmount, setContributeAmount] = useState('')
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!name || !target || !monthly) return
-    addGoal({
+    await addGoal({
       name,
       targetAmount: parseFloat(target),
       currentAmount: 0,
@@ -43,10 +43,10 @@ export function Goals() {
     setOpen(false)
   }
 
-  const handleContribute = (id: string) => {
+  const handleContribute = async (id: string) => {
     const amount = parseFloat(contributeAmount)
     if (isNaN(amount) || amount <= 0) return
-    contributeToGoal(id, amount)
+    await contributeToGoal(id, amount)
     setContributeId(null)
     setContributeAmount('')
   }
