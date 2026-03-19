@@ -14,6 +14,7 @@ import {
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
 import { formatCurrency, formatMonthShort } from '@/utils/formatters'
+import { getCategoryColor } from '@/utils/categoryColors'
 
 export function MonthlyChart() {
   const transactions = useStore((s) => s.transactions)
@@ -106,17 +107,11 @@ export function CategoryChart() {
         categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount
       })
 
-    const colors: Record<string, string> = {
-      food: '#f97316', groceries: '#22c55e', transport: '#3b82f6', health: '#ef4444',
-      entertainment: '#8b5cf6', housing: '#06b6d4', shopping: '#ec4899', education: '#f59e0b',
-      other: '#6b7280',
-    }
-
     return Object.entries(categoryTotals)
       .map(([name, value]) => ({
         name: t.categories[name as keyof typeof t.categories] || name,
         value,
-        color: colors[name] || '#6b7280',
+        color: getCategoryColor(name),
       }))
       .sort((a, b) => b.value - a.value)
   }, [transactions, t])
