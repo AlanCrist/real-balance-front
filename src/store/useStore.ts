@@ -13,7 +13,7 @@ interface AppState {
   months: Month[]
   currentMonthId: string | null
 
-  addTransaction: (tx: Omit<Transaction, 'id'>) => void
+  addTransaction: (tx: Omit<Transaction, 'id'>, installmentCount?: number) => void
   removeTransaction: (id: string) => void
   updateTransaction: (id: string, updates: Partial<Transaction>) => void
 
@@ -72,12 +72,12 @@ const defaultTransactions: Transaction[] = [
   { id: '1', amount: 35, type: 'expense', category: 'food', description: 'lunch', date: new Date(currentYear, currentMonth, now.getDate()).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
   { id: '2', amount: 120, type: 'expense', category: 'groceries', description: 'weekly groceries', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
   { id: '3', amount: 25, type: 'expense', category: 'transport', description: 'uber ride', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '4', amount: 15, type: 'expense', category: 'entertainment', description: 'netflix', date: new Date(currentYear, currentMonth, now.getDate() - 2).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
+  { id: '4', amount: 15, type: 'expense', category: 'subscriptions', description: 'netflix', date: new Date(currentYear, currentMonth, now.getDate() - 2).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
   { id: '5', amount: 60, type: 'expense', category: 'health', description: 'pharmacy', date: new Date(currentYear, currentMonth, now.getDate() - 3).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
   { id: '6', amount: 85, type: 'expense', category: 'shopping', description: 'new shoes', date: new Date(currentYear, currentMonth, now.getDate() - 4).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
   { id: '7', amount: 42, type: 'expense', category: 'food', description: 'dinner with friends', date: new Date(currentYear, currentMonth, now.getDate() - 5).toISOString(), paymentMethod: 'debit', accountId: '2', status: 'paid', isRecurring: false, monthId: defaultMonthId },
   { id: '8', amount: 200, type: 'expense', category: 'housing', description: 'electricity bill', date: new Date(currentYear, currentMonth, now.getDate() - 6).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
-  { id: '9', amount: 3500, type: 'income', category: 'other', description: 'salary', date: new Date(currentYear, currentMonth, 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
+  { id: '9', amount: 3500, type: 'income', category: 'salary', description: 'salary', date: new Date(currentYear, currentMonth, 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
   { id: '10', amount: 30, type: 'expense', category: 'transport', description: 'gas station', date: new Date(currentYear, currentMonth, now.getDate() - 7).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
 ]
 
@@ -85,6 +85,14 @@ const defaultGoals: Goal[] = [
   { id: '1', name: 'Emergency Fund', targetAmount: 10000, currentAmount: 3200, monthlyTarget: 500, color: '#3b82f6' },
   { id: '2', name: 'Vacation Trip', targetAmount: 3000, currentAmount: 800, monthlyTarget: 300, deadline: new Date(currentYear, currentMonth + 6, 1).toISOString(), color: '#8b5cf6' },
 ]
+
+/** Find or create a Month record for a given calendar month/year, returns [month, updatedMonths] */
+function ensureMonth(months: Month[], month: number, year: number): [Month, Month[]] {
+  const existing = months.find((m) => m.month === month && m.year === year)
+  if (existing) return [existing, months]
+  const newMonth: Month = { id: generateId(), month, year }
+  return [newMonth, [...months, newMonth]]
+}
 
 export const useStore = create<AppState>()(
   persist(
@@ -98,9 +106,56 @@ export const useStore = create<AppState>()(
       months: defaultMonths,
       currentMonthId: defaultMonthId,
 
-      addTransaction: (tx) =>
+      addTransaction: (tx, installmentCount) =>
         set((state) => {
-          const newTx = { ...tx, id: generateId() }
+          const firstId = generateId()
+
+          // Installment purchase on credit card
+          if (
+            installmentCount && installmentCount > 1 &&
+            tx.type === 'expense' &&
+            tx.paymentMethod === 'credit' &&
+            tx.creditCardId
+          ) {
+            const installmentAmount = Math.round((tx.amount / installmentCount) * 100) / 100
+            const baseDate = new Date(tx.date)
+            let updatedMonths = [...state.months]
+            const installmentTxs: Transaction[] = []
+
+            for (let i = 0; i < installmentCount; i++) {
+              const installDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
+              const [targetMonth, newMonths] = ensureMonth(updatedMonths, installDate.getMonth(), installDate.getFullYear())
+              updatedMonths = newMonths
+
+              installmentTxs.push({
+                ...tx,
+                id: i === 0 ? firstId : generateId(),
+                amount: installmentAmount,
+                date: installDate.toISOString(),
+                monthId: targetMonth.id,
+                status: i === 0 ? tx.status : 'pending',
+                installments: {
+                  total: installmentCount,
+                  current: i + 1,
+                  parentId: i > 0 ? firstId : undefined,
+                },
+              })
+            }
+
+            // Only increase card.used by first installment
+            const creditCards = state.creditCards.map((c) =>
+              c.id === tx.creditCardId ? { ...c, used: c.used + installmentAmount } : c
+            )
+
+            return {
+              transactions: [...installmentTxs, ...state.transactions],
+              creditCards,
+              months: updatedMonths,
+            }
+          }
+
+          const newTx = { ...tx, id: firstId }
+
           if (tx.type === 'expense' && tx.paymentMethod !== 'credit' && tx.accountId) {
             const accounts = state.accounts.map((a) =>
               a.id === tx.accountId ? { ...a, balance: a.balance - tx.amount } : a
