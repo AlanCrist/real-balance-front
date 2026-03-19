@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Receipt, CreditCard, MoreHorizontal, Plus, Wallet, Target, BarChart3, X } from 'lucide-react'
+import { LayoutDashboard, Receipt, CreditCard, MoreHorizontal, Plus, Wallet, Target, BarChart3, X, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function MobileNav() {
   const [moreOpen, setMoreOpen] = useState(false)
   const navigate = useNavigate()
   const { t } = useI18n()
+  const { signOut } = useAuth()
 
   const mainItems = [
     { to: '/', icon: LayoutDashboard, label: t.nav.home },
@@ -71,6 +73,13 @@ export function MobileNav() {
                     <span>{label}</span>
                   </NavLink>
                 ))}
+                <button
+                  onClick={() => { setMoreOpen(false); signOut() }}
+                  className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>{t.auth.logout}</span>
+                </button>
               </div>
             </motion.div>
           </>
