@@ -106,11 +106,27 @@ export interface ParsedExpense {
   type: TransactionType
 }
 
+export interface Profile {
+  id: string
+  monthlyIncome: number
+  theme: 'light' | 'dark'
+  locale: 'pt' | 'en' | 'es' | 'fr'
+  onboardingCompleted: boolean
+}
+
 export interface OnboardingData {
   monthlyIncome: number
   creditCardLimit: number
   accounts: Array<{ name: string; type: AccountType; balance: number }>
   completed: boolean
+}
+
+export interface MonthlySummary {
+  totalIncome: number
+  totalExpenses: number
+  fixedExpenses: number
+  variableExpenses: number
+  transactionCount: number
 }
 
 export interface MonthlySpending {
