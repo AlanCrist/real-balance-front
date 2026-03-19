@@ -10,6 +10,27 @@ export type CardNetwork = 'visa' | 'mastercard' | 'elo' | 'amex' | 'hipercard'
 
 export type CardType = 'credit' | 'debit' | 'hybrid'
 
+export type CategoryKey =
+  | 'food'
+  | 'groceries'
+  | 'transport'
+  | 'health'
+  | 'entertainment'
+  | 'housing'
+  | 'shopping'
+  | 'education'
+  | 'travel'
+  | 'personal_care'
+  | 'subscriptions'
+  | 'pets'
+  | 'gifts'
+  | 'taxes'
+  | 'salary'
+  | 'freelance'
+  | 'investment'
+  | 'rental'
+  | 'other'
+
 export interface Account {
   id: string
   name: string
@@ -45,6 +66,12 @@ export interface Month {
   year: number
 }
 
+export interface Installment {
+  total: number    // e.g., 3
+  current: number  // 1-indexed
+  parentId?: string // id of the first installment transaction
+}
+
 export interface Transaction {
   id: string
   amount: number
@@ -55,9 +82,10 @@ export interface Transaction {
   paymentMethod: PaymentMethod
   accountId?: string
   creditCardId?: string
-  status: TransactionStatus    // NEW: 'pending' | 'paid'
-  isRecurring: boolean         // NEW
-  monthId?: string             // NEW: links to Month.id
+  status: TransactionStatus
+  isRecurring: boolean
+  monthId?: string
+  installments?: Installment
 }
 
 export interface Goal {
@@ -75,7 +103,7 @@ export interface ParsedExpense {
   description: string
   category: string
   paymentMethod: PaymentMethod
-  type: TransactionType   // NEW: 'expense' | 'income' | 'transfer'
+  type: TransactionType
 }
 
 export interface OnboardingData {
