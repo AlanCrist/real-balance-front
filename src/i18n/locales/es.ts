@@ -316,6 +316,25 @@ export default {
     other: 'Otros',
   },
 
+  auth: {
+    login: 'Iniciar sesión',
+    signup: 'Crear cuenta',
+    loginSubtitle: 'Inicia sesión para continuar',
+    signupSubtitle: 'Crea tu cuenta gratuita',
+    email: 'Correo electrónico',
+    password: 'Contraseña',
+    confirmPassword: 'Confirmar Contraseña',
+    passwordMismatch: 'Las contraseñas no coinciden',
+    noAccount: '¿No tienes una cuenta?',
+    signupLink: 'Crear cuenta',
+    hasAccount: '¿Ya tienes una cuenta?',
+    loginLink: 'Iniciar sesión',
+    checkEmail: 'Revisa tu correo',
+    confirmationSent: 'Enviamos un enlace de confirmación a tu correo.',
+    backToLogin: 'Volver al login',
+    logout: 'Cerrar sesión',
+  },
+
   paymentMethods: {
     debit: 'Débito',
     credit: 'Crédito',

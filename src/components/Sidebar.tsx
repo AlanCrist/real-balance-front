@@ -9,15 +9,18 @@ import {
   Moon,
   Sun,
   Plus,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/i18n'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function Sidebar() {
   const { theme, toggleTheme } = useTheme()
   const { t } = useI18n()
+  const { signOut } = useAuth()
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: t.nav.dashboard },
@@ -88,6 +91,13 @@ export function Sidebar() {
           {theme === 'dark' ? t.nav.lightMode : t.nav.darkMode}
         </button>
         <LanguageSwitcher />
+        <button
+          onClick={signOut}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          {t.auth.logout}
+        </button>
       </div>
     </aside>
   )

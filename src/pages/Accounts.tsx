@@ -41,16 +41,16 @@ export function Accounts() {
     setEditBalance(String(account.balance))
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editingId || !editName) return
-    updateAccount(editingId, { name: editName, balance: parseFloat(editBalance) || 0 })
+    await updateAccount(editingId, { name: editName, balance: parseFloat(editBalance) || 0 })
     setEditingId(null)
   }
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName || !newBalance) return
     const config = accountTypeConfig[newType]
-    addAccount({
+    await addAccount({
       name: newName,
       type: newType,
       balance: parseFloat(newBalance),

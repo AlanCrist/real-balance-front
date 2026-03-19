@@ -29,11 +29,11 @@ export function CreditCardPage() {
     setIsModalOpen(true)
   }
 
-  const handleSaveCard = (cardData: Omit<CreditCard, 'id'>) => {
+  const handleSaveCard = async (cardData: Omit<CreditCard, 'id'>) => {
     if (editingCard) {
-      updateCreditCard(editingCard.id, cardData)
+      await updateCreditCard(editingCard.id, cardData)
     } else {
-      addCreditCard(cardData)
+      await addCreditCard(cardData)
     }
     setIsModalOpen(false)
     setEditingCard(null)

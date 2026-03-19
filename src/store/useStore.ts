@@ -1,43 +1,58 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { Account, CreditCard, Transaction, Goal, OnboardingData, Month } from '@/types'
-import { generateId } from '@/utils/formatters'
+import { api } from '@/services/api'
+import type { Account, CreditCard, Transaction, Goal, Profile, Month } from '@/types'
 
 interface AppState {
+  // Data (loaded from API)
   transactions: Transaction[]
   accounts: Account[]
   creditCards: CreditCard[]
   goals: Goal[]
-  onboarding: OnboardingData
-  theme: 'light' | 'dark'
   months: Month[]
   currentMonthId: string | null
+  profile: Profile | null
+  theme: 'light' | 'dark'
 
-  addTransaction: (tx: Omit<Transaction, 'id'>, installmentCount?: number) => void
-  removeTransaction: (id: string) => void
-  updateTransaction: (id: string, updates: Partial<Transaction>) => void
+  // Sync state
+  loading: boolean
+  error: string | null
 
-  addAccount: (account: Omit<Account, 'id'>) => void
-  updateAccount: (id: string, updates: Partial<Account>) => void
-  removeAccount: (id: string) => void
+  // Init / teardown
+  fetchAll: () => Promise<void>
+  clearAll: () => void
 
-  addCreditCard: (card: Omit<CreditCard, 'id'>) => void
-  updateCreditCard: (id: string, updates: Partial<CreditCard>) => void
-  removeCreditCard: (id: string) => void
+  // Transactions
+  addTransaction: (tx: Omit<Transaction, 'id'>, installmentCount?: number) => Promise<void>
+  removeTransaction: (id: string) => Promise<void>
+  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>
 
-  addGoal: (goal: Omit<Goal, 'id'>) => void
-  updateGoal: (id: string, updates: Partial<Goal>) => void
-  removeGoal: (id: string) => void
-  contributeToGoal: (id: string, amount: number) => void
+  // Accounts
+  addAccount: (account: Omit<Account, 'id'>) => Promise<void>
+  updateAccount: (id: string, updates: Partial<Account>) => Promise<void>
+  removeAccount: (id: string) => Promise<void>
 
-  addMonth: (m: Omit<Month, 'id'>) => void
+  // Credit Cards
+  addCreditCard: (card: Omit<CreditCard, 'id'>) => Promise<void>
+  updateCreditCard: (id: string, updates: Partial<CreditCard>) => Promise<void>
+  removeCreditCard: (id: string) => Promise<void>
+
+  // Goals
+  addGoal: (goal: Omit<Goal, 'id'>) => Promise<void>
+  updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>
+  removeGoal: (id: string) => Promise<void>
+  contributeToGoal: (id: string, amount: number) => Promise<void>
+
+  // Months
+  addMonth: (m: Omit<Month, 'id'>) => Promise<void>
   setCurrentMonth: (id: string | null) => void
-  duplicateMonth: (fromMonthId: string, mode: 'all' | 'recurring') => void
+  duplicateMonth: (fromMonthId: string, mode: 'all' | 'recurring') => Promise<void>
+  loadMonthTransactions: (monthId: string) => Promise<void>
 
-  setOnboarding: (data: Partial<OnboardingData>) => void
-  completeOnboarding: () => void
+  // Profile
+  updateProfile: (data: Partial<Profile>) => Promise<void>
   toggleTheme: () => void
 
+  // Computed getters (read from local state)
   getTotalBalance: () => number
   getTotalCreditUsed: () => number
   getTotalCreditLimit: () => number
@@ -48,364 +63,238 @@ interface AppState {
   getRealBalance: () => number
 }
 
-const defaultAccounts: Account[] = [
-  { id: '1', name: 'Main Bank', type: 'bank', balance: 3500, color: '#3b82f6', icon: 'Building2' },
-  { id: '2', name: 'Cash', type: 'cash', balance: 200, color: '#22c55e', icon: 'Banknote' },
-  { id: '3', name: 'Digital Wallet', type: 'digital', balance: 450, color: '#8b5cf6', icon: 'Smartphone' },
-]
+export const useStore = create<AppState>()((set, get) => ({
+  transactions: [],
+  accounts: [],
+  creditCards: [],
+  goals: [],
+  months: [],
+  currentMonthId: null,
+  profile: null,
+  theme: 'dark',
+  loading: false,
+  error: null,
 
-const defaultCreditCards: CreditCard[] = [
-  { id: '1', name: 'Visa Platinum', bank: 'Itaú', network: 'visa', cardType: 'credit', limit: 5000, used: 1240, closingDay: 25, dueDay: 5, color: '#ff6b35' },
-]
+  // ---- Init: load everything from API after login ----
+  fetchAll: async () => {
+    set({ loading: true, error: null })
+    try {
+      const [accounts, creditCards, goals, months, profile] = await Promise.all([
+        api.getAccounts(),
+        api.getCreditCards(),
+        api.getGoals(),
+        api.getMonths(),
+        api.getProfile(),
+      ])
 
-const now = new Date()
-const currentMonth = now.getMonth()
-const currentYear = now.getFullYear()
+      // Find current month
+      const now = new Date()
+      const currentMonth = months.find(
+        (m) => m.month === now.getMonth() && m.year === now.getFullYear()
+      )
 
-const defaultMonthId = generateId()
+      // Load transactions for current month (or all if no month exists)
+      const txResult = await api.getTransactions(
+        currentMonth ? { monthId: currentMonth.id } : undefined
+      )
 
-const defaultMonths: Month[] = [
-  { id: defaultMonthId, month: currentMonth, year: currentYear },
-]
-
-const defaultTransactions: Transaction[] = [
-  { id: '1', amount: 35, type: 'expense', category: 'food', description: 'lunch', date: new Date(currentYear, currentMonth, now.getDate()).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '2', amount: 120, type: 'expense', category: 'groceries', description: 'weekly groceries', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '3', amount: 25, type: 'expense', category: 'transport', description: 'uber ride', date: new Date(currentYear, currentMonth, now.getDate() - 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '4', amount: 15, type: 'expense', category: 'subscriptions', description: 'netflix', date: new Date(currentYear, currentMonth, now.getDate() - 2).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
-  { id: '5', amount: 60, type: 'expense', category: 'health', description: 'pharmacy', date: new Date(currentYear, currentMonth, now.getDate() - 3).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '6', amount: 85, type: 'expense', category: 'shopping', description: 'new shoes', date: new Date(currentYear, currentMonth, now.getDate() - 4).toISOString(), paymentMethod: 'credit', creditCardId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '7', amount: 42, type: 'expense', category: 'food', description: 'dinner with friends', date: new Date(currentYear, currentMonth, now.getDate() - 5).toISOString(), paymentMethod: 'debit', accountId: '2', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-  { id: '8', amount: 200, type: 'expense', category: 'housing', description: 'electricity bill', date: new Date(currentYear, currentMonth, now.getDate() - 6).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
-  { id: '9', amount: 3500, type: 'income', category: 'salary', description: 'salary', date: new Date(currentYear, currentMonth, 1).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: true, monthId: defaultMonthId },
-  { id: '10', amount: 30, type: 'expense', category: 'transport', description: 'gas station', date: new Date(currentYear, currentMonth, now.getDate() - 7).toISOString(), paymentMethod: 'debit', accountId: '1', status: 'paid', isRecurring: false, monthId: defaultMonthId },
-]
-
-const defaultGoals: Goal[] = [
-  { id: '1', name: 'Emergency Fund', targetAmount: 10000, currentAmount: 3200, monthlyTarget: 500, color: '#3b82f6' },
-  { id: '2', name: 'Vacation Trip', targetAmount: 3000, currentAmount: 800, monthlyTarget: 300, deadline: new Date(currentYear, currentMonth + 6, 1).toISOString(), color: '#8b5cf6' },
-]
-
-/** Find or create a Month record for a given calendar month/year, returns [month, updatedMonths] */
-function ensureMonth(months: Month[], month: number, year: number): [Month, Month[]] {
-  const existing = months.find((m) => m.month === month && m.year === year)
-  if (existing) return [existing, months]
-  const newMonth: Month = { id: generateId(), month, year }
-  return [newMonth, [...months, newMonth]]
-}
-
-export const useStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      transactions: defaultTransactions,
-      accounts: defaultAccounts,
-      creditCards: defaultCreditCards,
-      goals: defaultGoals,
-      onboarding: { monthlyIncome: 3500, creditCardLimit: 5000, accounts: [], completed: true },
-      theme: 'dark',
-      months: defaultMonths,
-      currentMonthId: defaultMonthId,
-
-      addTransaction: (tx, installmentCount) =>
-        set((state) => {
-          const firstId = generateId()
-
-          // Installment purchase on credit card
-          if (
-            installmentCount && installmentCount > 1 &&
-            tx.type === 'expense' &&
-            tx.paymentMethod === 'credit' &&
-            tx.creditCardId
-          ) {
-            const installmentAmount = Math.round((tx.amount / installmentCount) * 100) / 100
-            const baseDate = new Date(tx.date)
-            let updatedMonths = [...state.months]
-            const installmentTxs: Transaction[] = []
-
-            for (let i = 0; i < installmentCount; i++) {
-              const installDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
-              const [targetMonth, newMonths] = ensureMonth(updatedMonths, installDate.getMonth(), installDate.getFullYear())
-              updatedMonths = newMonths
-
-              installmentTxs.push({
-                ...tx,
-                id: i === 0 ? firstId : generateId(),
-                amount: installmentAmount,
-                date: installDate.toISOString(),
-                monthId: targetMonth.id,
-                status: i === 0 ? tx.status : 'pending',
-                installments: {
-                  total: installmentCount,
-                  current: i + 1,
-                  parentId: i > 0 ? firstId : undefined,
-                },
-              })
-            }
-
-            // Only increase card.used by first installment
-            const creditCards = state.creditCards.map((c) =>
-              c.id === tx.creditCardId ? { ...c, used: c.used + installmentAmount } : c
-            )
-
-            return {
-              transactions: [...installmentTxs, ...state.transactions],
-              creditCards,
-              months: updatedMonths,
-            }
-          }
-
-          const newTx = { ...tx, id: firstId }
-
-          if (tx.type === 'expense' && tx.paymentMethod !== 'credit' && tx.accountId) {
-            const accounts = state.accounts.map((a) =>
-              a.id === tx.accountId ? { ...a, balance: a.balance - tx.amount } : a
-            )
-            return { transactions: [newTx, ...state.transactions], accounts }
-          }
-          if (tx.type === 'expense' && tx.paymentMethod === 'credit' && tx.creditCardId) {
-            const creditCards = state.creditCards.map((c) =>
-              c.id === tx.creditCardId ? { ...c, used: c.used + tx.amount } : c
-            )
-            return { transactions: [newTx, ...state.transactions], creditCards }
-          }
-          if (tx.type === 'income' && tx.accountId) {
-            const accounts = state.accounts.map((a) =>
-              a.id === tx.accountId ? { ...a, balance: a.balance + tx.amount } : a
-            )
-            return { transactions: [newTx, ...state.transactions], accounts }
-          }
-          return { transactions: [newTx, ...state.transactions] }
-        }),
-
-      removeTransaction: (id) =>
-        set((state) => ({
-          transactions: state.transactions.filter((t) => t.id !== id),
-        })),
-
-      updateTransaction: (id, updates) =>
-        set((state) => ({
-          transactions: state.transactions.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-        })),
-
-      addAccount: (account) =>
-        set((state) => ({
-          accounts: [...state.accounts, { ...account, id: generateId() }],
-        })),
-
-      updateAccount: (id, updates) =>
-        set((state) => ({
-          accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...updates } : a)),
-        })),
-
-      removeAccount: (id) =>
-        set((state) => ({
-          accounts: state.accounts.filter((a) => a.id !== id),
-        })),
-
-      addCreditCard: (card) =>
-        set((state) => ({
-          creditCards: [...state.creditCards, { ...card, id: generateId() }],
-        })),
-
-      updateCreditCard: (id, updates) =>
-        set((state) => ({
-          creditCards: state.creditCards.map((c) => (c.id === id ? { ...c, ...updates } : c)),
-        })),
-
-      removeCreditCard: (id) =>
-        set((state) => ({
-          creditCards: state.creditCards.filter((c) => c.id !== id),
-        })),
-
-      addGoal: (goal) =>
-        set((state) => ({
-          goals: [...state.goals, { ...goal, id: generateId() }],
-        })),
-
-      updateGoal: (id, updates) =>
-        set((state) => ({
-          goals: state.goals.map((g) => (g.id === id ? { ...g, ...updates } : g)),
-        })),
-
-      removeGoal: (id) =>
-        set((state) => ({
-          goals: state.goals.filter((g) => g.id !== id),
-        })),
-
-      contributeToGoal: (id, amount) =>
-        set((state) => ({
-          goals: state.goals.map((g) =>
-            g.id === id ? { ...g, currentAmount: g.currentAmount + amount } : g
-          ),
-        })),
-
-      addMonth: (m) =>
-        set((state) => ({
-          months: [...state.months, { ...m, id: generateId() }],
-        })),
-
-      setCurrentMonth: (id) =>
-        set(() => ({
-          currentMonthId: id,
-        })),
-
-      duplicateMonth: (fromMonthId, mode) =>
-        set((state) => {
-          const fromMonth = state.months.find((m) => m.id === fromMonthId)
-          if (!fromMonth) return state
-
-          const newMonthId = generateId()
-          const newMonth: Month = {
-            id: newMonthId,
-            month: (fromMonth.month + 1) % 12,
-            year: fromMonth.month === 11 ? fromMonth.year + 1 : fromMonth.year,
-          }
-
-          const transactionsToClone = state.transactions.filter((t) =>
-            mode === 'all'
-              ? t.monthId === fromMonthId
-              : t.monthId === fromMonthId && t.isRecurring
-          )
-
-          const clonedTransactions = transactionsToClone.map((t) => ({
-            ...t,
-            id: generateId(),
-            monthId: newMonthId,
-            status: 'pending' as const,
-            date: new Date(newMonth.year, newMonth.month, new Date(t.date).getDate()).toISOString(),
-          }))
-
-          return {
-            months: [...state.months, newMonth],
-            transactions: [...state.transactions, ...clonedTransactions],
-          }
-        }),
-
-      setOnboarding: (data) =>
-        set((state) => ({
-          onboarding: { ...state.onboarding, ...data },
-        })),
-
-      completeOnboarding: () =>
-        set((state) => ({
-          onboarding: { ...state.onboarding, completed: true },
-        })),
-
-      toggleTheme: () =>
-        set((state) => ({
-          theme: state.theme === 'dark' ? 'light' : 'dark',
-        })),
-
-      getTotalBalance: () => {
-        return get().accounts.reduce((sum, a) => sum + a.balance, 0)
-      },
-
-      getTotalCreditUsed: () => {
-        return get().creditCards.reduce((sum, c) => sum + c.used, 0)
-      },
-
-      getTotalCreditLimit: () => {
-        return get().creditCards.reduce((sum, c) => sum + c.limit, 0)
-      },
-
-      getMonthlySpending: () => {
-        const state = get()
-        const currentMonthId = state.currentMonthId
-        const currentMonth = state.months.find((m) => m.id === currentMonthId)
-
-        if (!currentMonth) {
-          const now = new Date()
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          return state.transactions
-            .filter((t) => t.type === 'expense' && new Date(t.date) >= startOfMonth)
-            .reduce((sum, t) => sum + t.amount, 0)
-        }
-
-        return state.transactions
-          .filter((t) => {
-            if (t.monthId === currentMonthId) return t.type === 'expense'
-            if (!t.monthId) {
-              const txDate = new Date(t.date)
-              return t.type === 'expense' && txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
-            }
-            return false
-          })
-          .reduce((sum, t) => sum + t.amount, 0)
-      },
-
-      getMonthlyIncome: () => {
-        const state = get()
-        const currentMonthId = state.currentMonthId
-        const currentMonth = state.months.find((m) => m.id === currentMonthId)
-
-        if (!currentMonth) {
-          const now = new Date()
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          return state.transactions
-            .filter((t) => t.type === 'income' && new Date(t.date) >= startOfMonth)
-            .reduce((sum, t) => sum + t.amount, 0)
-        }
-
-        return state.transactions
-          .filter((t) => {
-            if (t.monthId === currentMonthId) return t.type === 'income'
-            if (!t.monthId) {
-              const txDate = new Date(t.date)
-              return t.type === 'income' && txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
-            }
-            return false
-          })
-          .reduce((sum, t) => sum + t.amount, 0)
-      },
-
-      getMonthlyFixed: () => {
-        const state = get()
-        const currentMonthId = state.currentMonthId
-        const currentMonth = state.months.find((m) => m.id === currentMonthId)
-
-        if (!currentMonth) return 0
-
-        return state.transactions
-          .filter((t) => {
-            const isInMonth =
-              t.monthId === currentMonthId ||
-              (!t.monthId && (() => {
-                const txDate = new Date(t.date)
-                return txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
-              })())
-            return isInMonth && t.type === 'expense' && t.isRecurring
-          })
-          .reduce((sum, t) => sum + t.amount, 0)
-      },
-
-      getMonthlyVariable: () => {
-        const state = get()
-        const currentMonthId = state.currentMonthId
-        const currentMonth = state.months.find((m) => m.id === currentMonthId)
-
-        if (!currentMonth) return 0
-
-        return state.transactions
-          .filter((t) => {
-            const isInMonth =
-              t.monthId === currentMonthId ||
-              (!t.monthId && (() => {
-                const txDate = new Date(t.date)
-                return txDate.getMonth() === currentMonth.month && txDate.getFullYear() === currentMonth.year
-              })())
-            return isInMonth && t.type === 'expense' && !t.isRecurring
-          })
-          .reduce((sum, t) => sum + t.amount, 0)
-      },
-
-      getRealBalance: () => {
-        const totalBalance = get().getTotalBalance()
-        const totalCreditUsed = get().getTotalCreditUsed()
-        return totalBalance - totalCreditUsed
-      },
-    }),
-    {
-      name: 'real-balance-storage',
+      set({
+        accounts,
+        creditCards,
+        goals,
+        months,
+        profile,
+        transactions: txResult.data,
+        currentMonthId: currentMonth?.id ?? null,
+        theme: profile?.theme ?? 'dark',
+        loading: false,
+      })
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false })
     }
-  )
-)
+  },
+
+  clearAll: () =>
+    set({
+      accounts: [],
+      creditCards: [],
+      goals: [],
+      months: [],
+      transactions: [],
+      profile: null,
+      currentMonthId: null,
+      loading: false,
+      error: null,
+    }),
+
+  // ---- Transactions ----
+  addTransaction: async (tx, installmentCount) => {
+    const created = await api.createTransaction(tx, installmentCount)
+    // Reload accounts and cards to reflect balance changes
+    const [accounts, creditCards] = await Promise.all([
+      api.getAccounts(),
+      api.getCreditCards(),
+    ])
+    set((state) => ({
+      transactions: [...created, ...state.transactions],
+      accounts,
+      creditCards,
+    }))
+  },
+
+  removeTransaction: async (id) => {
+    await api.deleteTransaction(id)
+    set((state) => ({
+      transactions: state.transactions.filter((t) => t.id !== id),
+    }))
+  },
+
+  updateTransaction: async (id, updates) => {
+    const updated = await api.updateTransaction(id, updates)
+    set((state) => ({
+      transactions: state.transactions.map((t) => (t.id === id ? updated : t)),
+    }))
+  },
+
+  // ---- Accounts ----
+  addAccount: async (account) => {
+    const created = await api.createAccount(account)
+    set((state) => ({ accounts: [...state.accounts, created] }))
+  },
+
+  updateAccount: async (id, updates) => {
+    const updated = await api.updateAccount(id, updates)
+    set((state) => ({
+      accounts: state.accounts.map((a) => (a.id === id ? updated : a)),
+    }))
+  },
+
+  removeAccount: async (id) => {
+    await api.deleteAccount(id)
+    set((state) => ({ accounts: state.accounts.filter((a) => a.id !== id) }))
+  },
+
+  // ---- Credit Cards ----
+  addCreditCard: async (card) => {
+    const created = await api.createCreditCard(card)
+    set((state) => ({ creditCards: [...state.creditCards, created] }))
+  },
+
+  updateCreditCard: async (id, updates) => {
+    const updated = await api.updateCreditCard(id, updates)
+    set((state) => ({
+      creditCards: state.creditCards.map((c) => (c.id === id ? updated : c)),
+    }))
+  },
+
+  removeCreditCard: async (id) => {
+    await api.deleteCreditCard(id)
+    set((state) => ({ creditCards: state.creditCards.filter((c) => c.id !== id) }))
+  },
+
+  // ---- Goals ----
+  addGoal: async (goal) => {
+    const created = await api.createGoal(goal)
+    set((state) => ({ goals: [...state.goals, created] }))
+  },
+
+  updateGoal: async (id, updates) => {
+    const updated = await api.updateGoal(id, updates)
+    set((state) => ({
+      goals: state.goals.map((g) => (g.id === id ? updated : g)),
+    }))
+  },
+
+  removeGoal: async (id) => {
+    await api.deleteGoal(id)
+    set((state) => ({ goals: state.goals.filter((g) => g.id !== id) }))
+  },
+
+  contributeToGoal: async (id, amount) => {
+    const updated = await api.contributeToGoal(id, amount)
+    set((state) => ({
+      goals: state.goals.map((g) => (g.id === id ? updated : g)),
+    }))
+  },
+
+  // ---- Months ----
+  addMonth: async (m) => {
+    const created = await api.createMonth(m)
+    set((state) => ({ months: [...state.months, created] }))
+  },
+
+  setCurrentMonth: (id) => set({ currentMonthId: id }),
+
+  duplicateMonth: async (fromMonthId, mode) => {
+    const result = await api.duplicateMonth(fromMonthId, mode)
+    // Reload months and transactions
+    const months = await api.getMonths()
+    const txResult = await api.getTransactions({ monthId: result.monthId })
+    set({ months, transactions: txResult.data, currentMonthId: result.monthId })
+  },
+
+  loadMonthTransactions: async (monthId) => {
+    const txResult = await api.getTransactions({ monthId })
+    set({ transactions: txResult.data, currentMonthId: monthId })
+  },
+
+  // ---- Profile ----
+  updateProfile: async (data) => {
+    const updated = await api.updateProfile(data)
+    set({ profile: updated })
+  },
+
+  toggleTheme: () => {
+    const newTheme = get().theme === 'dark' ? 'light' : 'dark'
+    set({ theme: newTheme })
+    // Fire and forget — update server in background
+    api.updateProfile({ theme: newTheme }).catch(() => {})
+  },
+
+  // ---- Computed getters (unchanged — read local state) ----
+  getTotalBalance: () => {
+    return get().accounts.reduce((sum, a) => sum + a.balance, 0)
+  },
+
+  getTotalCreditUsed: () => {
+    return get().creditCards.reduce((sum, c) => sum + c.used, 0)
+  },
+
+  getTotalCreditLimit: () => {
+    return get().creditCards.reduce((sum, c) => sum + c.limit, 0)
+  },
+
+  getMonthlySpending: () => {
+    const state = get()
+    return state.transactions
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0)
+  },
+
+  getMonthlyIncome: () => {
+    const state = get()
+    return state.transactions
+      .filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0)
+  },
+
+  getMonthlyFixed: () => {
+    const state = get()
+    return state.transactions
+      .filter((t) => t.type === 'expense' && t.isRecurring)
+      .reduce((sum, t) => sum + t.amount, 0)
+  },
+
+  getMonthlyVariable: () => {
+    const state = get()
+    return state.transactions
+      .filter((t) => t.type === 'expense' && !t.isRecurring)
+      .reduce((sum, t) => sum + t.amount, 0)
+  },
+
+  getRealBalance: () => {
+    const totalBalance = get().getTotalBalance()
+    const totalCreditUsed = get().getTotalCreditUsed()
+    return totalBalance - totalCreditUsed
+  },
+}))
