@@ -1,17 +1,16 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { TransactionList } from '@/components/TransactionList'
 import { CreditCardVisual } from '@/components/CreditCardVisual'
 import { CreditCardModal } from '@/components/CreditCardModal'
+import { CardStatement } from '@/components/CardStatement'
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
 import type { CreditCard } from '@/types'
 
 export function CreditCardPage() {
   const creditCards = useStore((s) => s.creditCards)
-  const transactions = useStore((s) => s.transactions)
   const addCreditCard = useStore((s) => s.addCreditCard)
   const updateCreditCard = useStore((s) => s.updateCreditCard)
   const removeCreditCard = useStore((s) => s.removeCreditCard)
@@ -19,8 +18,6 @@ export function CreditCardPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCard, setEditingCard] = useState<CreditCard | null>(null)
-
-  const creditTransactions = transactions.filter((tx) => tx.paymentMethod === 'credit')
 
   const handleAddCard = () => {
     setEditingCard(null)
@@ -69,28 +66,19 @@ export function CreditCardPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {creditCards.map((card) => (
-            <CreditCardVisual
-              key={card.id}
-              card={card}
-              onEdit={handleEditCard}
-              onDelete={handleDeleteCard}
-              showActions
-            />
+            <div key={card.id} className="space-y-4">
+              <CreditCardVisual
+                card={card}
+                onEdit={handleEditCard}
+                onDelete={handleDeleteCard}
+                showActions
+              />
+              <CardStatement card={card} />
+            </div>
           ))}
         </div>
-      )}
-
-      {creditTransactions.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t.creditCards.creditCardTransactions}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <TransactionList transactions={creditTransactions} showDelete showEdit />
-          </CardContent>
-        </Card>
       )}
 
       <CreditCardModal
