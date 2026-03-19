@@ -316,6 +316,25 @@ export default {
     other: 'Other',
   },
 
+  auth: {
+    login: 'Sign In',
+    signup: 'Sign Up',
+    loginSubtitle: 'Sign in to your account to continue',
+    signupSubtitle: 'Create your free account',
+    email: 'Email',
+    password: 'Password',
+    confirmPassword: 'Confirm Password',
+    passwordMismatch: 'Passwords do not match',
+    noAccount: "Don't have an account?",
+    signupLink: 'Sign up',
+    hasAccount: 'Already have an account?',
+    loginLink: 'Sign in',
+    checkEmail: 'Check your email',
+    confirmationSent: 'We sent a confirmation link to your email.',
+    backToLogin: 'Back to login',
+    logout: 'Logout',
+  },
+
   paymentMethods: {
     debit: 'Debit',
     credit: 'Credit',
