@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, Plus, TrendingUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { TransactionList } from '@/components/TransactionList'
+import { AddTransactionModal } from '@/components/AddTransactionModal'
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
-import type { PaymentMethod } from '@/types'
+import type { PaymentMethod, TransactionType } from '@/types'
 
 export function Transactions() {
   const transactions = useStore((s) => s.transactions)
@@ -22,6 +23,13 @@ export function Transactions() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [addModalType, setAddModalType] = useState<TransactionType>('expense')
+
+  const openAdd = (type: TransactionType) => {
+    setAddModalType(type)
+    setAddModalOpen(true)
+  }
 
   const paymentMethods: Array<{ value: PaymentMethod | 'all'; label: string }> = [
     { value: 'all', label: t.common.all },
@@ -78,9 +86,21 @@ export function Transactions() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">{t.transactions.title}</h1>
-        <p className="text-sm text-muted-foreground">{t.transactions.subtitle}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t.transactions.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.transactions.subtitle}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5 text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10" onClick={() => openAdd('income')}>
+            <TrendingUp className="h-3.5 w-3.5" />
+            {t.transactions.addIncome}
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => openAdd('expense')}>
+            <Plus className="h-3.5 w-3.5" />
+            {t.transactions.addExpense}
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -230,6 +250,12 @@ export function Transactions() {
           <TransactionList transactions={filtered} showDelete showEdit />
         </CardContent>
       </Card>
+
+      <AddTransactionModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        defaultType={addModalType}
+      />
     </div>
   )
 }

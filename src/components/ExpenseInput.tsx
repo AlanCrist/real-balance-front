@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, X, CreditCard, Banknote, Smartphone, DollarSign, Mic, MicOff } from 'lucide-react'
 import { parseExpenseInput } from '@/utils/parseExpense'
 import { formatCurrency } from '@/utils/formatters'
+import { getCategoryColor } from '@/utils/categoryColors'
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -256,11 +257,3 @@ export function ExpenseInput({ autoFocus = false, onSuccess, className, size = '
   )
 }
 
-function getCategoryColor(category: string): string {
-  const colors: Record<string, string> = {
-    food: '#f97316', groceries: '#22c55e', transport: '#3b82f6', health: '#ef4444',
-    entertainment: '#8b5cf6', housing: '#06b6d4', shopping: '#ec4899', education: '#f59e0b',
-    other: '#6b7280',
-  }
-  return colors[category] || '#6b7280'
-}

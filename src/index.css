@@ -4,56 +4,61 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 240 10% 98%;
+    --foreground: 240 10% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 142 71% 45%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 11%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
-    --radius: 0.75rem;
+    --popover-foreground: 240 10% 8%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 94%;
+    --secondary-foreground: 240 10% 20%;
+    --muted: 240 10% 94%;
+    --muted-foreground: 240 5% 50%;
+    --accent: 262 30% 93%;
+    --accent-foreground: 262 60% 35%;
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 95% 50%;
+    --warning-foreground: 30 50% 15%;
+    --border: 240 10% 88%;
+    --input: 240 10% 88%;
+    --ring: 262 83% 58%;
+    --radius: 0.875rem;
+
+    /* Risk color tokens */
+    --risk-low: 158 64% 40%;
+    --risk-medium: 38 95% 50%;
+    --risk-high: 0 84% 55%;
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 52%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 142 71% 45%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 6%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --background: 240 12% 7%;
+    --foreground: 240 5% 96%;
+    --card: 240 12% 10%;
+    --card-foreground: 240 5% 96%;
+    --popover: 240 12% 10%;
+    --popover-foreground: 240 5% 96%;
+    --primary: 262 80% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 16%;
+    --secondary-foreground: 240 5% 90%;
+    --muted: 240 10% 16%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 262 30% 20%;
+    --accent-foreground: 262 80% 75%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 158 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 90% 55%;
+    --warning-foreground: 30 50% 10%;
+    --border: 240 10% 17%;
+    --input: 240 10% 17%;
+    --ring: 262 80% 65%;
   }
 }
 
@@ -72,6 +77,92 @@ html {
   scroll-behavior: smooth;
 }
 
+/* === Risk State Animations === */
+
+@keyframes pulse-danger {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.15), 0 0 20px rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.8);
+  }
+}
+
+@keyframes pulse-warning {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.12), 0 0 16px rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.7);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  12%       { transform: translateX(-5px) rotate(-0.4deg); }
+  25%       { transform: translateX(5px) rotate(0.4deg); }
+  37%       { transform: translateX(-3px); }
+  50%       { transform: translateX(3px); }
+  62%       { transform: translateX(-2px); }
+  75%       { transform: translateX(2px); }
+  87%       { transform: translateX(-1px); }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+@keyframes glow-success {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50%       { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.15), 0 0 16px rgba(34, 197, 94, 0.1); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Utility classes for animations */
+.animate-pulse-danger {
+  animation: pulse-danger 2s ease-in-out infinite;
+  border: 1px solid transparent;
+}
+
+.animate-pulse-warning {
+  animation: pulse-warning 2.5s ease-in-out infinite;
+  border: 1px solid transparent;
+}
+
+.animate-shake {
+  animation: shake 0.6s ease-in-out;
+}
+
+.animate-breathe {
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+.animate-glow-success {
+  animation: glow-success 2.5s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -79,5 +170,11 @@ html {
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Glassmorphism card */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
