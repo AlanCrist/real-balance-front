@@ -50,13 +50,13 @@ export function AddTransactionModal({ open, onOpenChange, defaultType = 'expense
     setInstallmentCount(1)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const numAmount = parseFloat(amount)
     if (isNaN(numAmount) || numAmount <= 0 || !description.trim()) return
 
     const isCredit = type === 'expense' && paymentMethod === 'credit'
 
-    addTransaction(
+    await addTransaction(
       {
         type,
         description: description.trim(),

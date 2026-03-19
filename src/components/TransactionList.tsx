@@ -184,12 +184,12 @@ export function TransactionList({ transactions, showDelete = false, compact = fa
 
   const editingTransaction = editingId ? transactions.find((t) => t.id === editingId) : null
 
-  const handleToggleStatus = useCallback((id: string, currentStatus: string) => {
-    updateTransaction(id, { status: currentStatus === 'paid' ? 'pending' : 'paid' })
+  const handleToggleStatus = useCallback(async (id: string, currentStatus: string) => {
+    await updateTransaction(id, { status: currentStatus === 'paid' ? 'pending' : 'paid' })
   }, [updateTransaction])
 
-  const handleDelete = useCallback((id: string) => {
-    removeTransaction(id)
+  const handleDelete = useCallback(async (id: string) => {
+    await removeTransaction(id)
   }, [removeTransaction])
 
   const handleEdit = useCallback((id: string) => {

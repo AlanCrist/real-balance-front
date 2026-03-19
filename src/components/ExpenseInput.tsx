@@ -100,13 +100,13 @@ export function ExpenseInput({ autoFocus = false, onSuccess, className, size = '
     }
   }, [isListening])
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     if (!parsed) return
 
     const defaultAccount = accounts[0]
     const defaultCard = creditCards[0]
 
-    addTransaction({
+    await addTransaction({
       amount: parsed.amount,
       type: parsed.type,
       category: parsed.category,

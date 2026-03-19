@@ -16,23 +16,23 @@ export function NewMonthModal({ open, onOpenChange }: NewMonthModalProps) {
 
   const lastMonth = months.length > 0 ? months[months.length - 1] : null
 
-  const handleCreateEmpty = () => {
+  const handleCreateEmpty = async () => {
     if (!lastMonth) return
     const nextMonth = (lastMonth.month + 1) % 12
     const nextYear = lastMonth.month === 11 ? lastMonth.year + 1 : lastMonth.year
-    addMonth({ month: nextMonth, year: nextYear })
+    await addMonth({ month: nextMonth, year: nextYear })
     onOpenChange(false)
   }
 
-  const handleDuplicateAll = () => {
+  const handleDuplicateAll = async () => {
     if (!lastMonth) return
-    duplicateMonth(lastMonth.id, 'all')
+    await duplicateMonth(lastMonth.id, 'all')
     onOpenChange(false)
   }
 
-  const handleDuplicateRecurring = () => {
+  const handleDuplicateRecurring = async () => {
     if (!lastMonth) return
-    duplicateMonth(lastMonth.id, 'recurring')
+    await duplicateMonth(lastMonth.id, 'recurring')
     onOpenChange(false)
   }
 
