@@ -6,6 +6,8 @@ import { useI18n } from '@/i18n'
 interface EarnedBadge {
   id: string
   label: string
+  emoji: string
+  variant: 'secondary' | 'success' | 'warning'
 }
 
 export function Badges() {
@@ -47,6 +49,8 @@ export function Badges() {
         earned.push({
           id: 'tracking-streak',
           label: t.badges.trackingStreak.replace('{count}', String(maxStreak)),
+          emoji: '🔥',
+          variant: maxStreak >= 15 ? 'warning' : 'secondary',
         })
       }
     }
@@ -74,22 +78,28 @@ export function Badges() {
       earned.push({
         id: 'under-budget',
         label: t.badges.underBudget,
+        emoji: '💰',
+        variant: 'success',
       })
     }
 
-    // First Goal: any goal has currentAmount > 0
+    // First Goal: any goal exists with currentAmount > 0
     if (goals.some((g) => g.currentAmount > 0)) {
       earned.push({
         id: 'first-goal',
         label: t.badges.firstGoal,
+        emoji: '🎯',
+        variant: 'secondary',
       })
     }
 
-    // Savings Growing: any goal has been contributed to (not just from onboarding)
-    if (goals.some((g) => g.currentAmount > 0)) {
+    // Goal Reached: any goal where currentAmount >= targetAmount
+    if (goals.some((g) => g.currentAmount >= g.targetAmount && g.targetAmount > 0)) {
       earned.push({
-        id: 'savings-growing',
-        label: t.badges.savingsGrowing,
+        id: 'savings-goal-reached',
+        label: t.badges.savingsGoalReached,
+        emoji: '🏆',
+        variant: 'warning',
       })
     }
 
@@ -97,14 +107,21 @@ export function Badges() {
   }, [transactions, goals, t])
 
   if (badges.length === 0) {
-    return null
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 px-4 py-3">
+        <span className="text-lg">🎮</span>
+        <p className="text-xs text-muted-foreground">
+          {t.badges.emptyState}
+        </p>
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-wrap gap-2">
       {badges.map((badge) => (
-        <Badge key={badge.id} variant="secondary" className="text-xs">
-          🏅 {badge.label}
+        <Badge key={badge.id} variant={badge.variant} className="text-xs gap-1">
+          <span>{badge.emoji}</span> {badge.label}
         </Badge>
       ))}
     </div>
