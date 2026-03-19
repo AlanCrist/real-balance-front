@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, DollarSign, CreditCard, Building2 } from 'lucide-react'
+import { ArrowRight, DollarSign, CreditCard, Building2, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { api } from '@/services/api'
 
 export function Onboarding() {
   const navigate = useNavigate()
-  const setOnboarding = useStore((s) => s.setOnboarding)
-  const completeOnboarding = useStore((s) => s.completeOnboarding)
   const addAccount = useStore((s) => s.addAccount)
   const addCreditCard = useStore((s) => s.addCreditCard)
+  const fetchAll = useStore((s) => s.fetchAll)
   const { t } = useI18n()
 
   const [step, setStep] = useState(0)
@@ -21,6 +21,7 @@ export function Onboarding() {
   const [creditLimit, setCreditLimit] = useState('')
   const [accountName, setAccountName] = useState('')
   const [accountBalance, setAccountBalance] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const steps = [
     {
@@ -40,40 +41,65 @@ export function Onboarding() {
     },
   ]
 
-  const handleNext = () => {
-    if (step === 0) {
-      setOnboarding({ monthlyIncome: parseFloat(income) || 0 })
-      setStep(1)
-    } else if (step === 1) {
-      const limit = parseFloat(creditLimit)
-      if (limit > 0) {
-        setOnboarding({ creditCardLimit: limit })
-        addCreditCard({
-          name: 'My Card',
-          bank: 'other',
-          network: 'visa',
-          cardType: 'credit',
-          limit,
-          used: 0,
-          closingDay: 25,
-          dueDay: 5,
-          color: '#3b82f6',
-        })
+  const handleNext = async () => {
+    setLoading(true)
+    try {
+      if (step === 0) {
+        await api.updateProfile({ monthlyIncome: parseFloat(income) || 0 })
+        setStep(1)
+      } else if (step === 1) {
+        const limit = parseFloat(creditLimit)
+        if (limit > 0) {
+          await addCreditCard({
+            name: 'My Card',
+            bank: 'other',
+            network: 'visa',
+            cardType: 'credit',
+            limit,
+            used: 0,
+            closingDay: 25,
+            dueDay: 5,
+            color: '#3b82f6',
+          })
+        }
+        setStep(2)
+      } else {
+        const balance = parseFloat(accountBalance)
+        if (accountName && !isNaN(balance)) {
+          await addAccount({
+            name: accountName,
+            type: 'bank',
+            balance,
+            color: '#3b82f6',
+            icon: 'Building2',
+          })
+        }
+        // Mark onboarding complete + create first month
+        const now = new Date()
+        await Promise.all([
+          api.updateProfile({ onboardingCompleted: true }),
+          api.createMonth({ month: now.getMonth(), year: now.getFullYear() }),
+        ])
+        await fetchAll()
+        navigate('/')
       }
-      setStep(2)
-    } else {
-      const balance = parseFloat(accountBalance)
-      if (accountName && !isNaN(balance)) {
-        addAccount({
-          name: accountName,
-          type: 'bank',
-          balance,
-          color: '#3b82f6',
-          icon: 'Building2',
-        })
-      }
-      completeOnboarding()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSkip = async () => {
+    setLoading(true)
+    try {
+      const now = new Date()
+      await Promise.all([
+        api.updateProfile({ onboardingCompleted: true }),
+        api.createMonth({ month: now.getMonth(), year: now.getFullYear() }),
+      ])
+      await fetchAll()
       navigate('/')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -157,17 +183,16 @@ export function Onboarding() {
               </div>
             )}
 
-            <Button onClick={handleNext} className="w-full h-11 gap-2">
+            <Button onClick={handleNext} className="w-full h-11 gap-2" disabled={loading}>
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {step < 2 ? t.common.continue : t.common.getStarted}
-              <ArrowRight className="h-4 w-4" />
+              {!loading && <ArrowRight className="h-4 w-4" />}
             </Button>
 
             {step < 2 && (
               <button
-                onClick={() => {
-                  completeOnboarding()
-                  navigate('/')
-                }}
+                onClick={handleSkip}
+                disabled={loading}
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 {t.common.skip}
