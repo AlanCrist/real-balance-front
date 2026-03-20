@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
-import { api } from '@/services/api'
+import { api } from '@/services'
 
 export function Onboarding() {
   const navigate = useNavigate()

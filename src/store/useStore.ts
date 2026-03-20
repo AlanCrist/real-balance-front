@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { api } from '@/services/api'
+import { api } from '@/services'
 import type { Account, CreditCard, Transaction, Goal, Profile, Month } from '@/types'
 
 interface AppState {
