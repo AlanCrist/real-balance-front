@@ -13,12 +13,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const IS_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+
+const MOCK_USER = { id: 'mock-user', email: 'demo@realbalance.app' } as User
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(IS_MOCK ? MOCK_USER : null)
   const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!IS_MOCK)
 
   useEffect(() => {
+    if (IS_MOCK) return
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -38,16 +44,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string) => {
+    if (IS_MOCK) return { error: null }
     const { error } = await supabase.auth.signUp({ email, password })
     return { error: error as Error | null }
   }
 
   const signIn = async (email: string, password: string) => {
+    if (IS_MOCK) return { error: null }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error as Error | null }
   }
 
   const signOut = async () => {
+    if (IS_MOCK) return
     await supabase.auth.signOut()
   }
 
