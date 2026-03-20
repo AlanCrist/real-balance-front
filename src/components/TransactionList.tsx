@@ -4,7 +4,7 @@ import { Trash2, CreditCard, Banknote, DollarSign, Smartphone, ArrowUpRight, Arr
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import { getCategoryColor } from '@/utils/categoryColors'
 import { useStore } from '@/store/useStore'
-import { useI18n } from '@/i18n'
+import { useI18n, type Locale } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { TransactionEditModal } from './TransactionEditModal'
 import type { Transaction, PaymentMethod } from '@/types'
@@ -44,7 +44,7 @@ function SwipeableRow({
   onDelete: (id: string) => void
   onToggleStatus: (id: string, currentStatus: string) => void
   t: any
-  locale: string
+  locale: Locale
 }) {
   const x = useMotionValue(0)
   const leftBg = useTransform(x, [0, SWIPE_THRESHOLD], ['rgba(34,197,94,0)', 'rgba(34,197,94,0.2)'])

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, ArrowDownRight, ArrowUpRight, CreditCard as CardIcon } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChevronLeft, ChevronRight, CreditCard as CardIcon } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useStore } from '@/store/useStore'
 import { useI18n } from '@/i18n'
@@ -73,7 +73,6 @@ function buildCycles(card: CreditCard, transactions: Transaction[], count = 6): 
 export function CardStatement({ card }: CardStatementProps) {
   const transactions = useStore((s) => s.transactions)
   const { t, locale } = useI18n()
-  const [cycleIndex, setCycleIndex] = useState(0) // 0 = most recent shown first
 
   const cycles = useMemo(() => buildCycles(card, transactions), [card, transactions])
   const currentCycleIndex = cycles.findIndex((c) => c.isCurrent)
