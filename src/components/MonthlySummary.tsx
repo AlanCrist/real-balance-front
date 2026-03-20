@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, Lock, TrendingUp } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { useI18n } from '@/i18n'
+import { useI18n, type Locale } from '@/i18n'
 import { formatCurrency } from '@/utils/formatters'
 import { cn } from '@/lib/utils'
 
-function AnimatedValue({ value, locale, className }: { value: number; locale: string; className?: string }) {
+function AnimatedValue({ value, locale, className }: { value: number; locale: Locale; className?: string }) {
   const [display, setDisplay] = useState(0)
   const prevValue = useRef(0)
   const rafRef = useRef<number>(0)
@@ -90,9 +90,9 @@ export function MonthlySummary() {
       {data.map((item, idx) => {
         const conf = summaryCards[idx]
         const Icon = conf.icon
-        const color = 'getColor' in conf ? conf.getColor(item.value) : conf.color
-        const bg = 'getBg' in conf ? conf.getBg(item.value) : conf.bgColor
-        const border = 'getBorder' in conf ? conf.getBorder(item.value) : conf.borderColor
+        const color = 'getColor' in conf ? conf.getColor!(item.value) : conf.color!
+        const bg = 'getBg' in conf ? conf.getBg!(item.value) : conf.bgColor!
+        const border = 'getBorder' in conf ? conf.getBorder!(item.value) : conf.borderColor!
 
         return (
           <motion.div
